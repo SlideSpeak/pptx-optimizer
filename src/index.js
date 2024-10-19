@@ -9,23 +9,27 @@ const run = async () => {
   tmp.setGracefulCleanup();
 
   const [inputFilePath, outputFilePath] = program.args;
-  const unzipDirPath = tmp.dirSync().name;
+  const tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  const unzipDirPath = tmpDir.name;
 
-  console.log('start processing');
-  await unzip(inputFilePath, unzipDirPath);
-  await optimize(unzipDirPath);
-  await zip(unzipDirPath, outputFilePath);
-
-  logSeparator();
-  console.log('end processing');
-  compareFileSizes(inputFilePath, outputFilePath, console.log);
-
-  if (program.opts().debug) {
+  try {
+    console.log('start processing');
+    await unzip(inputFilePath, unzipDirPath);
+    await optimize(unzipDirPath);
+    await zip(unzipDirPath, outputFilePath);
     logSeparator();
-    console.log('opening generated file');
-    const debugFilePath = outputFilePath.replace('.pptx', `.debug-${Date.now()}.pptx`);
-    fs.copyFileSync(outputFilePath, debugFilePath);
-    await execAsync(`npx open-cli ${debugFilePath}`);
+    console.log('end processing');
+    compareFileSizes(inputFilePath, outputFilePath, console.log);
+
+    if (program.opts().debug) {
+      logSeparator();
+      console.log('opening generated file');
+      const debugFilePath = outputFilePath.replace('.pptx', `.debug-${Date.now()}.pptx`);
+      fs.copyFileSync(outputFilePath, debugFilePath);
+      await execAsync(`npx open-cli ${debugFilePath}`);
+    }
+  } finally {
+    tmpDir.removeCallback();
   }
 };
 
